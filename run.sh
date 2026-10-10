@@ -15,12 +15,14 @@ echo "$(date '+%F %T') 生成完成,开始 git 提交"
 TOKEN_FILE=/home/tvsource/github_token
 REPO_FILE=/home/tvsource/github_repo
 git add -A >> update.log 2>&1
-if git diff --cached --quiet; then
-    echo "$(date '+%F %T') 内容无变化,跳过提交"
-    exit 0
+if ! git diff --cached --quiet; then
+    git commit -m "auto update $(date '+%F %T')" >> update.log 2>&1 || exit 1
+    echo "$(date '+%F %T') 已提交"
+else
+    echo "$(date '+%F %T') 内容无变化,不产生新提交"
 fi
-git commit -m "auto update $(date '+%F %T')" >> update.log 2>&1 || exit 1
 
+# 推送(幂等,内容一致时为 no-op)
 if [ -s "$TOKEN_FILE" ] && [ -s "$REPO_FILE" ] && ! grep -q "你的" "$REPO_FILE"; then
     REPO=$(tr -d ' \r\n' < "$REPO_FILE")
     TOKEN=$(tr -d ' \r\n' < "$TOKEN_FILE")
@@ -29,6 +31,7 @@ if [ -s "$TOKEN_FILE" ] && [ -s "$REPO_FILE" ] && ! grep -q "你的" "$REPO_FILE
         echo "$(date '+%F %T') 已推送到 $REPO"
     else
         echo "$(date '+%F %T') 推送失败,详见 update.log"
+        exit 1
     fi
 else
     echo "$(date '+%F %T') 未配置 github_repo/github_token,仅本地提交"
