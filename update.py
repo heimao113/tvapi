@@ -50,13 +50,15 @@ ADULT_NAME_KW = ["av", "黄色", "成人", "伦理", "性吧", "杏吧", "色猫
                  "麻豆", "淫", "番号", "奶香", "香奶", "老色逼", "gay", "sex",
                  "jkun", "玉兔", "鲨鱼", "辣椒", "美少女", "白嫖", "精品资源",
                  "抖阴", "黑料", "激情", "蜜桃", "蜜柚", "华为吧", "淘片"]
-# 分类名命中(实测,最权威)
+# 硬核成人栏目(出现一个就不算干净源)
 ADULT_CAT_RE = re.compile(
-    r"无码|有码|传媒|伦理|麻豆|巨乳|人妻|熟女|偷拍|自拍|少妇|口爆|颜射|中出|"
-    r"三级|激情|艳舞|约炮|援交|情色|色情|性爱|做爱|中文字幕|福利|写真|"
-    r"抖阴|蜜桃|萝莉|御姐|极品|骚|女优|风俗|探花"
+    r"无码|有码|传媒|麻豆|巨乳|人妻|熟女|偷拍|自拍|少妇|口爆|颜射|中出|"
+    r"三级|激情|艳舞|约炮|援交|情色|色情|性爱|做爱|中文字幕|写真|"
+    r"抖阴|蜜桃|萝莉|御姐|极品|骚|女优|风俗|探花|里番"
 )
-# 判定为成人站:强命中 ≥3 条且占分类总数 ≥30%(正规站常带单个"伦理片/福利"栏目,不能只看单命中)
+# 软性栏目(正规站常带,不算成人)
+SOFT_CAT_RE = re.compile(r"伦理|福利|理论")
+# 判定为成人站:硬命中 ≥3 条且占分类总数 ≥30%
 ADULT_MIN_HITS = 3
 ADULT_MIN_RATIO = 0.30
 
@@ -143,7 +145,7 @@ def probe(nid: str, rec: dict) -> dict:
     """实测分类接口,返回 {alive, cats, adult, tags, ms}"""
     api = rec["api"].rstrip("/")
     res = {"alive": False, "cats": [], "probe_adult": None, "mixed": False, "hits": [],
-           "tags": "", "err": "", "ms": None}
+           "soft_hits": [], "tags": "", "err": "", "ms": None}
     for suffix in ("?ac=list", "?ac=videolist"):
         try:
             import time
@@ -165,6 +167,7 @@ def probe(nid: str, rec: dict) -> dict:
                 res["cats"] = cats
                 strong = [c for c in cats if ADULT_CAT_RE.search(c)]
                 res["hits"] = strong
+                res["soft_hits"] = [c for c in cats if SOFT_CAT_RE.search(c) and c not in strong]
                 res["probe_adult"] = len(strong) >= ADULT_MIN_HITS and len(strong) / len(cats) >= ADULT_MIN_RATIO
                 res["mixed"] = bool(strong) and not res["probe_adult"]
                 tags = set()
@@ -253,8 +256,9 @@ def emit(merged, order, results, lives):
             "是否成人": "是" if cls["adult"] else "否", "判定依据": cls["why"],
             "状态": cls["status"], "响应ms": pres.get("ms") if pres.get("ms") is not None else "-",
             "内容标签": pres["tags"] or "-",
-            "含成人栏目": "是(少量)" if cls["mixed"] else "-",
+            "含成人栏目": "是(硬核)" if cls["mixed"] else "-",
             "成人栏目数": len(pres.get("hits", [])),
+            "软性栏目数": len(pres.get("soft_hits", [])),
             "归属": where,
             "分类名": " | ".join(pres["cats"][:20]), "来源": ",".join(dict.fromkeys(rec["from"])),
         })
@@ -321,7 +325,7 @@ def main():
                 results[nid] = fu.result()
             except Exception as e:
                 results[nid] = {"alive": False, "cats": [], "probe_adult": None, "mixed": False,
-                                "hits": [], "tags": "", "err": str(e), "ms": None}
+                                "hits": [], "soft_hits": [], "tags": "", "err": str(e), "ms": None}
     emit(merged, order, results, lives)
     print("[完成]")
 
