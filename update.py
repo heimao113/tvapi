@@ -48,7 +48,8 @@ ADULT_DOMAINS = {
 # 名称命中(兜底,探测失败时用)
 ADULT_NAME_KW = ["av", "黄色", "成人", "伦理", "性吧", "杏吧", "色猫", "色嗨",
                  "麻豆", "淫", "番号", "奶香", "香奶", "老色逼", "gay", "sex",
-                 "jkun", "玉兔", "鲨鱼", "辣椒", "美少女", "白嫖", "精品资源"]
+                 "jkun", "玉兔", "鲨鱼", "辣椒", "美少女", "白嫖", "精品资源",
+                 "抖阴", "黑料", "激情", "蜜桃", "蜜柚", "华为吧", "淘片"]
 # 分类名命中(实测,最权威)
 ADULT_CAT_RE = re.compile(
     r"无码|有码|传媒|伦理|麻豆|巨乳|人妻|熟女|偷拍|自拍|少妇|口爆|颜射|中出|"
@@ -238,7 +239,15 @@ def emit(merged, order, results, lives):
             entry["detail"] = rec["detail"]
         k = keyify(nid, rec, used)
         full["api_site"][k] = entry
-        (adult if cls["adult"] else clean)["api_site"][k] = entry
+        if cls["adult"]:
+            adult["api_site"][k] = entry
+            where = "18禁版"
+        elif cls["mixed"]:
+            # 混装站(带少量成人栏目)不进人版,只在完整版
+            where = "仅完整版"
+        else:
+            clean["api_site"][k] = entry
+            where = "人版"
         rows.append({
             "key": k, "名称": rec["name"], "接口": rec["api"], "域名": rec["detail"] or "",
             "是否成人": "是" if cls["adult"] else "否", "判定依据": cls["why"],
@@ -246,6 +255,7 @@ def emit(merged, order, results, lives):
             "内容标签": pres["tags"] or "-",
             "含成人栏目": "是(少量)" if cls["mixed"] else "-",
             "成人栏目数": len(pres.get("hits", [])),
+            "归属": where,
             "分类名": " | ".join(pres["cats"][:20]), "来源": ",".join(dict.fromkeys(rec["from"])),
         })
 

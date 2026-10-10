@@ -123,6 +123,14 @@
       "name": "性吧资源",
       "api": "https://xingba111.com/api.php/provide/vod"
     },
+    "huawei8": {
+      "name": "华为吧资源",
+      "api": "https://huawei8.live/api.php/provide/vod"
+    },
+    "taopianapi": {
+      "name": "淘片资源",
+      "api": "https://taopianapi.com/cjapi/sda/vod"
+    },
     "hsckzy888": {
       "name": "黄色资源啊啊",
       "api": "https://hsckzy888.com/api.php/provide/vod"
