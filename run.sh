@@ -9,6 +9,7 @@ flock -n 9 || { echo "$(date '+%F %T') 已有任务在跑,跳过"; exit 0; }
 
 echo "===== $(date '+%F %T') 开始更新 ====="
 python3 update.py >> update.log 2>&1 || { echo "$(date '+%F %T') 生成失败,详见 update.log"; exit 1; }
+python3 speedtest.py >> update.log 2>&1 || echo "$(date '+%F %T') 测速失败(不影响产出),详见 update.log"
 echo "$(date '+%F %T') 生成完成,开始 git 提交"
 
 # ---- git 提交 + 推送(凭据从本地文件读取,不入库)----
@@ -27,7 +28,7 @@ if [ -s "$TOKEN_FILE" ] && [ -s "$REPO_FILE" ] && ! grep -q "你的" "$REPO_FILE
     REPO=$(tr -d ' \r\n' < "$REPO_FILE")
     TOKEN=$(tr -d ' \r\n' < "$TOKEN_FILE")
     PUSH_URL=$(echo "$REPO" | sed "s|https://|https://x-access-token:${TOKEN}@|")
-    if git push "$PUSH_URL" HEAD >> update.log 2>&1; then
+    if git push "$PUSH_URL" main >> update.log 2>&1; then
         echo "$(date '+%F %T') 已推送到 $REPO"
     else
         echo "$(date '+%F %T') 推送失败,详见 update.log"

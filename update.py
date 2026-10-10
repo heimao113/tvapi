@@ -128,16 +128,21 @@ def merge_all() -> tuple:
 
 
 def probe(nid: str, rec: dict) -> dict:
-    """实测分类接口,返回 {alive, cats, adult, tags, verdict}"""
+    """实测分类接口,返回 {alive, cats, adult, tags, ms}"""
     api = rec["api"].rstrip("/")
-    res = {"alive": False, "cats": [], "probe_adult": None, "mixed": False, "hits": [], "tags": "", "err": ""}
+    res = {"alive": False, "cats": [], "probe_adult": None, "mixed": False, "hits": [],
+           "tags": "", "err": "", "ms": None}
     for suffix in ("?ac=list", "?ac=videolist"):
         try:
+            import time
+            t0 = time.time()
             r = session.get(api + suffix, timeout=TIMEOUT)
+            ms = int((time.time() - t0) * 1000)
             if r.status_code != 200:
                 res["err"] = f"HTTP {r.status_code}"
                 continue
             res["alive"] = True
+            res["ms"] = ms
             try:
                 j = r.json()
             except ValueError:
@@ -226,7 +231,8 @@ def emit(merged, order, results, lives):
         rows.append({
             "key": k, "名称": rec["name"], "接口": rec["api"], "域名": rec["detail"] or "",
             "是否成人": "是" if cls["adult"] else "否", "判定依据": cls["why"],
-            "状态": cls["status"], "内容标签": pres["tags"] or "-",
+            "状态": cls["status"], "响应ms": pres.get("ms") if pres.get("ms") is not None else "-",
+            "内容标签": pres["tags"] or "-",
             "含成人栏目": "是(少量)" if cls["mixed"] else "-",
             "成人栏目数": len(pres.get("hits", [])),
             "分类名": " | ".join(pres["cats"][:20]), "来源": ",".join(dict.fromkeys(rec["from"])),
@@ -290,7 +296,7 @@ def main():
                 results[nid] = fu.result()
             except Exception as e:
                 results[nid] = {"alive": False, "cats": [], "probe_adult": None, "mixed": False,
-                                "hits": [], "tags": "", "err": str(e)}
+                                "hits": [], "tags": "", "err": str(e), "ms": None}
     emit(merged, order, results, lives)
     print("[完成]")
 
