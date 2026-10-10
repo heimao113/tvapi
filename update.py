@@ -74,6 +74,17 @@ def b58decode(s: str) -> bytes:
     return b"\x00" * pad + b
 
 
+def b58encode(b: bytes) -> str:
+    """标准 bs58(Bitcoin 字母表),与 MoonTV 订阅解码兼容;前导 0x00 → '1'"""
+    n = int.from_bytes(b, "big")
+    out = ""
+    while n:
+        n, r = divmod(n, 58)
+        out = B58_ALPHABET[r] + out
+    pad = len(b) - len(b.lstrip(b"\x00"))
+    return "1" * pad + out
+
+
 def fetch_source(src) -> dict:
     r = session.get(src["url"], timeout=30)
     r.raise_for_status()
@@ -244,6 +255,10 @@ def emit(merged, order, results, lives):
     for obj, fname in [(full, "moontv_完整版.json"), (clean, "moontv_人版.json"), (adult, "moontv_18禁版.json")]:
         with open(os.path.join(OUT, fname), "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, indent=2)
+        # MoonTV 订阅要求 Base58 编码:同名 _b58.json,单行无换行(尾随换行会导致 bs58 解码报错)
+        with open(os.path.join(OUT, fname.replace(".json", "_b58.json")), "w", encoding="utf-8") as f:
+            payload = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            f.write(b58encode(payload))
 
     # CSV + Excel
     cols = list(rows[0].keys()) if rows else []
