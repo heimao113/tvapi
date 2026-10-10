@@ -47,17 +47,16 @@ def get_json(api: str, params: str):
 
 
 def first_m3u8(api: str) -> tuple:
-    vids = get_json(api, "?ac=videolist&pg=1").get("list") or []
+    j = get_json(api, "?ac=videolist&pg=1")
+    vids = j.get("list") or []
     if not vids:
         return None, None
-    vid = vids[0].get("vod_id")
     title = vids[0].get("vod_name", "")
-    det = get_json(api, f"?ac=videodetail&ids={vid}").get("list") or []
-    if not det:
-        return None, title
-    play = det[0].get("vod_play_url", "")
-    group = play.split("$$$")[0]
-    for seg in group.split("#"):
+    play = vids[0].get("vod_play_url") or ""
+    if not play:  # 个别站列表不带播放地址,补一次 ids 详情
+        det = get_json(api, f"?ac=videolist&ids={vids[0].get('vod_id')}").get("list") or []
+        play = det[0].get("vod_play_url", "") if det else ""
+    for seg in play.split("$$$")[0].split("#"):
         url = seg.split("$")[-1]
         if ".m3u8" in url and url.startswith("http"):
             return url, title

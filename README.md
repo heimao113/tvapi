@@ -29,6 +29,12 @@
    ```
 3. 之后每天定时任务会自动 commit + push;未配置时仅本地提交。
 
+## 加速
+- 管线每天自动实测播放链路(取片→m3u8→TS切片前256KB):`output/测速排行.csv` 与 Excel"播放测速"sheet,评级 快≥1MB/s、中≥250KB/s、其余为慢
+- **选快源是最有效的加速**:实测普通影视站普遍被站方限速(100-400 KB/s),成人源多为 Cloudflare 托管(7-11 MB/s)
+- 约 7 成源走 Cloudflare:可用 [CloudflareSpeedTest](https://github.com/XIU2/CloudflareSpeedTest) 优选 IP 后写入本地 hosts,或自建 CF Worker 反代并缓存 m3u8/TS
+- 播放端:MoonTV/LunaTV 开启多源聚合,播放器增大缓冲
+
 ## 运行
 - 手动:`/home/tvsource/run.sh`
 - 定时:每天 05:30(crontab),日志 `update.log`
